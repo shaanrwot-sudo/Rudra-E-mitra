@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rudra E-Mitra | Admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div>
+          <div class="small-label">CSC Cyber Cafe</div>
+          <div class="brand">Rudra E-Mitra</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" id="refreshData">Refresh</button>
+          <a class="button" href="/customer?shop=CSC+Cyber+Cafe" target="_blank">Open Customer Page</a>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <h2>Generate Customer Upload QR</h2>
+          <div class="form-row">
+            <label for="shopName">Shop / Branch Name</label>
+            <input id="shopName" type="text" value="CSC Cyber Cafe" />
+          </div>
+          <div class="actions">
+            <button id="generateQrBtn">Generate QR</button>
+            <button class="warning" id="printQrBtn">Print QR</button>
+          </div>
+
+          <div class="qr-box" id="qrBox" style="display:none; margin-top: 24px;">
+            <img id="qrImage" alt="Customer upload QR" />
+            <div id="qrLink" class="url-box"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Recent Uploads</h2>
+          <div id="uploadList" class="upload-list"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const shopInput = document.getElementById('shopName');
+      const qrBox = document.getElementById('qrBox');
+      const qrImage = document.getElementById('qrImage');
+      const qrLink = document.getElementById('qrLink');
+      const uploadList = document.getElementById('uploadList');
+
+      async function generateQr() {
+        const shopName = shopInput.value.trim() || 'CSC Cyber Cafe';
+        const response = await fetch(`/api/qr?shop=${encodeURIComponent(shopName)}`);
+        const data = await response.json();
+
+        if (data.qrCode) {
+          qrImage.src = data.qrCode;
+          qrLink.textContent = data.url;
+          qrBox.style.display = 'inline-block';
+        }
+      }
+
+      async function loadUploads() {
+        const response = await fetch('/api/uploads');
+        const items = await response.json();
+
+        if (!items.length) {
+          uploadList.innerHTML = '<div class="empty-state">No customer documents uploaded yet.</div>';
+          return;
+        }
+
+        uploadList.innerHTML = items
+          .map((item) => `
+            <div class="upload-item">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                <div>
+                  <strong>${item.customerName}</strong><br />
+                  <span class="small-label">${item.service} • ${item.phone || 'No phone'}</span>
+                </div>
+                <div class="small-label">${new Date(item.createdAt).toLocaleString()}</div>
+              </div>
+              <div style="margin-top:8px;">${item.notes || 'No notes entered.'}</div>
+              <div class="doc-list">
+                ${(item.documents || []).map((doc) => `
+                  <a class="doc-chip" href="${doc.url}" target="_blank" rel="noreferrer">${doc.originalName}</a>
+                `).join('')}
+              </div>
+            </div>
+          `)
+          .join('');
+      }
+
+      document.getElementById('generateQrBtn').addEventListener('click', generateQr);
+      document.getElementById('refreshData').addEventListener('click', loadUploads);
+      document.getElementById('printQrBtn').addEventListener('click', () => window.print());
+
+      generateQr();
+      loadUploads();
+    </script>
+  </body>
+</html>
